@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- Lets the Battery plugin set the charge limit through pkexec. Exactly one
+     program, only for the active local session, and without a prompt: the
+     helper only takes a limit of 50-100 or pausing charging, so the worst a
+     caller can do is charge to 100% or hold the current level. -->
+<policyconfig>
+  <vendor>mutex-solutions</vendor>
+  <vendor_url>https://github.com/mutex-solutions/omarchy-battery</vendor_url>
+  <action id="com.mutex-solutions.battery.limit">
+    <description>Set the battery charge limit</description>
+    <message>Authentication is required to change the battery charge limit</message>
+    <icon_name>battery</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/libexec/omarchy-battery-limit</annotate>
+  </action>
+</policyconfig>

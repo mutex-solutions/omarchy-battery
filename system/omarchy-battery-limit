@@ -1,0 +1,58 @@
+#!/bin/bash
+# Root half of the Battery plugin: set the charge limit or pause charging.
+#
+#   omarchy-battery-limit limit <50-100>          stop charging at N%;
+#                                                 100 = no limit
+#   omarchy-battery-limit behaviour auto|inhibit-charge
+#
+# Runs as root through pkexec (polkit action com.mutex-solutions.battery.limit,
+# allowed for the active local session without a prompt: the worst a caller
+# can do is make the battery charge to 100% or pause charging). Installed to
+# /usr/local/libexec by scripts/install-helper.sh. Arguments are checked
+# strictly because they end up in sysfs paths and values as root.
+#
+# Start threshold: charging resumes below end-5 (ThinkPad convention; avoids
+# topping up every few minutes on AC). No limit = start 0, end 100.
+#
+# Write order: the firmware rejects start >= end at every step, so when the
+# new start is below the CURRENT end, start goes first; otherwise end first.
+set -u
+
+bat=""
+for d in /sys/class/power_supply/BAT*; do
+  [[ -w $d/charge_control_end_threshold ]] && { bat=$d; break; }
+done
+[[ -n $bat ]] || { echo "no battery with a charge_control_end_threshold" >&2; exit 3; }
+
+write() {  # file value
+  printf '%s\n' "$2" > "$bat/$1" 2>/dev/null
+}
+
+case "${1:-}" in
+  limit)
+    end="${2:-}"
+    [[ $end =~ ^[0-9]{2,3}$ ]] && (( end >= 50 && end <= 100 )) || { echo "limit must be 50-100" >&2; exit 2; }
+    if (( end == 100 )); then start=0; else start=$(( end - 5 )); fi
+    have_start=0; [[ -w $bat/charge_control_start_threshold ]] && have_start=1
+    cur_end=$(<"$bat/charge_control_end_threshold")
+    if (( have_start )) && (( start < cur_end )); then
+      write charge_control_start_threshold "$start" || true
+      write charge_control_end_threshold "$end" || { echo "firmware refused end=$end" >&2; exit 4; }
+    else
+      write charge_control_end_threshold "$end" || { echo "firmware refused end=$end" >&2; exit 4; }
+      (( have_start )) && { write charge_control_start_threshold "$start" || true; }
+    fi
+    # Some firmware rejects start 0; "no limit" then keeps start just below.
+    if (( have_start )) && (( end == 100 )) && [[ $(<"$bat/charge_control_start_threshold") != 0 ]]; then
+      write charge_control_start_threshold 95 || true
+    fi
+    [[ $(<"$bat/charge_control_end_threshold") == "$end" ]] || { echo "end did not stick" >&2; exit 4; }
+    ;;
+  behaviour)
+    case "${2:-}" in auto|inhibit-charge) ;; *) echo "behaviour must be auto or inhibit-charge" >&2; exit 2;; esac
+    [[ -w $bat/charge_behaviour ]] || { echo "no charge_behaviour on this battery" >&2; exit 3; }
+    write charge_behaviour "$2" || { echo "firmware refused $2" >&2; exit 4; }
+    ;;
+  *)
+    echo "usage: $0 limit <50-100> | behaviour auto|inhibit-charge" >&2; exit 2 ;;
+esac
