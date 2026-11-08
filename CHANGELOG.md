@@ -2,9 +2,10 @@
 
 ## 0.1.0
 
-- Charge limit: stop charging at 60, 70, 80 or 90%, or Off (100%). Charging
-  resumes 5 points below the limit (ThinkPad convention).
-- Tap the tile to turn the limit on (the last value used) or off.
+- Two fields: **Stop charging at** (50-100%) and **Start charging below**
+  (0 to stop-5, "Always" at 0), each a − / + stepper in 5s; start never
+  reaches stop. **Limit on / off** button; off = stop at 100%.
+- Tap the tile to turn the limit on (the last stop/start used) or off.
 - Charge to 100% once: lifts the limit until the battery is full or
   unplugged, then puts it back by itself.
 - Pause charging (firmware `inhibit-charge`) where the battery supports it.

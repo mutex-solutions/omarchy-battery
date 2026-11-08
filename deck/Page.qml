@@ -8,7 +8,8 @@ import "../Model.js" as M
 // hero (icon · title/state · percentage), the charge bar, a two-column facts
 // grid, a separator, then bordered buttons under a section header — the same
 // components (qs.Ui Button / PanelSectionHeader / PanelSeparator), so it reads
-// as part of Omarchy. What that panel only shows, this one can change.
+// as part of Omarchy. What that panel only shows, this one can change: two
+// fields, "Stop charging at" and "Start charging below".
 Item {
   id: page
 
@@ -44,6 +45,74 @@ Item {
     color: page.fg
     font.family: page.family
     font.pixelSize: Style.font.bodySmall
+  }
+
+  // Two fields, like a native setting: where charging stops, and where it
+  // starts again. − / + step by 5; start always stays below stop.
+  component Stepper: Item {
+    id: stepper
+    property string label: ""
+    property string value: ""
+    property bool enabledMinus: true
+    property bool enabledPlus: true
+    signal minus()
+    signal plus()
+    width: parent ? parent.width : 0
+    height: Math.max(stepRow.implicitHeight, Style.space(34))
+
+    Text {
+      anchors.left: parent.left
+      anchors.verticalCenter: parent.verticalCenter
+      text: stepper.label
+      textFormat: Text.PlainText
+      color: page.fg
+      opacity: 0.8
+      font.family: page.family
+      font.pixelSize: Style.font.bodySmall
+    }
+
+    // Row only orders its children; it is anchored, they are not.
+    Row {
+      id: stepRow
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      spacing: Style.space(6)
+
+      Button {
+        width: Style.space(34)
+        text: "−"
+        fontSize: Style.font.body
+        foreground: page.fg
+        fontFamily: page.family
+        bordered: true
+        opacity: stepper.enabledMinus ? 1 : 0.35
+        onClicked: if (stepper.enabledMinus) stepper.minus()
+      }
+
+      Text {
+        width: Style.space(56)
+        height: Style.space(34)
+        text: stepper.value
+        textFormat: Text.PlainText
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        color: page.fg
+        font.family: page.family
+        font.pixelSize: Style.font.body
+        font.bold: true
+      }
+
+      Button {
+        width: Style.space(34)
+        text: "+"
+        fontSize: Style.font.body
+        foreground: page.fg
+        fontFamily: page.family
+        bordered: true
+        opacity: stepper.enabledPlus ? 1 : 0.35
+        onClicked: if (stepper.enabledPlus) stepper.plus()
+      }
+    }
   }
 
   Column {
@@ -184,36 +253,44 @@ Item {
         fontFamily: page.family
       }
 
-      Row {
-        id: limitRow
-        width: parent.width
-        spacing: Style.space(6)
-        readonly property real cellWidth: (width - spacing * (M.LIMITS.length - 1)) / M.LIMITS.length
+      Stepper {
+        label: "Stop charging at"
+        value: page.st && page.st.limitOn ? page.st.end + "%" : "Off"
+        enabledMinus: !!page.st && (!page.st.limitOn || page.st.end > 50)
+        enabledPlus: !!page.st && page.st.limitOn
+        onMinus: page.st.stepStop(-M.STEP)
+        onPlus: page.st.stepStop(M.STEP)
+      }
 
-        Repeater {
-          model: M.LIMITS
-          Button {
-            required property int modelData
-            width: limitRow.cellWidth
-            text: modelData >= 100 ? "Off" : modelData + "%"
-            fontSize: Style.font.bodySmall
-            foreground: page.fg
-            fontFamily: page.family
-            horizontalPadding: Style.spacing.controlPaddingX
-            verticalPadding: Style.spacing.controlPaddingY + Style.space(2)
-            bordered: true
-            active: !!page.st && page.st.end === modelData && page.st.restoreTo === 0
-            onClicked: if (page.st) page.st.setLimit(modelData)
-          }
-        }
+      Stepper {
+        label: "Start charging below"
+        value: page.st && page.st.limitOn ? (page.st.start > 0 ? page.st.start + "%" : "Always") : "—"
+        enabledMinus: !!page.st && page.st.limitOn && page.st.start > 0
+        enabledPlus: !!page.st && page.st.limitOn && page.st.start < page.st.end - M.STEP
+        onMinus: page.st.stepStart(-M.STEP)
+        onPlus: page.st.stepStart(M.STEP)
       }
 
       Row {
         id: actionRow
         width: parent.width
         spacing: Style.space(6)
-        readonly property int count: page.st && page.st.canPause ? 2 : 1
+        readonly property int count: 1 + (page.st && (page.st.limitOn || page.st.restoreTo > 0) ? 1 : 0) + (page.st && page.st.canPause ? 1 : 0)
         readonly property real cellWidth: (width - spacing * (count - 1)) / count
+
+        Button {
+          width: actionRow.cellWidth
+          iconText: page.st && page.st.limitOn ? "󰚥" : "󰂄"
+          iconSize: Style.font.title
+          text: page.st && page.st.limitOn ? "Limit off" : "Limit on"
+          fontSize: Style.font.bodySmall
+          foreground: page.fg
+          fontFamily: page.family
+          horizontalPadding: Style.spacing.controlPaddingX
+          verticalPadding: Style.spacing.controlPaddingY + Style.space(2)
+          bordered: true
+          onClicked: if (page.st) page.st.toggle()
+        }
 
         Button {
           width: actionRow.cellWidth

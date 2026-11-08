@@ -46,4 +46,14 @@ t("icons and units", () => {
   assert.equal(M.icon(40, true), M.CHARGING)
   assert.equal(M.health(86440000, 90000000), "96%"); assert.equal(M.wh(86440000), "86Wh")
 })
+t("stepping stop and start", () => {
+  assert.deepEqual(M.stepStop(90, 85, 5), { stop: 95, start: 85 })
+  assert.deepEqual(M.stepStop(100, 85, 5), { stop: 100, start: 85 })
+  assert.deepEqual(M.stepStop(55, 50, -5), { stop: 50, start: 45 })
+  assert.deepEqual(M.stepStop(50, 45, -5), { stop: 50, start: 45 })
+  assert.deepEqual(M.stepStop(80, 75, -5), { stop: 75, start: 70 })   // start pulled down
+  assert.deepEqual(M.stepStart(90, 85, 5), { stop: 90, start: 85 })   // capped at stop-5
+  assert.deepEqual(M.stepStart(90, 60, 5), { stop: 90, start: 65 })
+  assert.deepEqual(M.stepStart(90, 0, -5), { stop: 90, start: 0 })
+})
 console.log("model ok: " + n + " tests")

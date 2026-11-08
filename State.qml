@@ -30,8 +30,10 @@ Item {
   property bool helperReady: false
 
   // remembered
-  property int savedLimit: 80          // what a tap turns the limit back on to
+  property int savedStop: 80           // what a tap turns the limit back on to
+  property int savedStart: 75
   property int restoreTo: 0            // >0 while "charge to 100% once" runs
+  property int restoreStart: 0
   property bool prefsLoaded: false
 
   property bool busy: false
@@ -52,32 +54,52 @@ Item {
 
   function refresh() { if (!readProc.running) readProc.running = true }
 
-  // Tap: limit on (to the remembered value) <-> off.
+  // Tap: limit on (to the remembered stop/start) <-> off.
   function toggle() {
     if (!present) return
-    if (limitOn) setLimit(100)
-    else setLimit(savedLimit)
+    if (limitOn) setLimit(100, 0)
+    else setLimit(savedStop, savedStart)
   }
 
-  function setLimit(n) {
-    if (n < 100) savedLimit = n
+  // Two fields: stop charging at `stop`, start again below `start`.
+  function setLimit(stop, start) {
+    if (start === undefined || start < 0) start = M.startFor(stop)
+    if (stop < 100) {
+      savedStop = stop
+      savedStart = start
+    }
     restoreTo = 0
     savePrefs()
-    run(["limit", String(n)])
+    run(["limit", String(stop), String(start)])
+  }
+
+  // The page's steppers. From Off, the first step starts from the saved pair.
+  function stepStop(delta) {
+    var base = limitOn ? { stop: end, start: start } : { stop: savedStop, start: savedStart }
+    var n = M.stepStop(base.stop, base.start, limitOn ? delta : 0)
+    setLimit(n.stop, n.start)
+  }
+
+  function stepStart(delta) {
+    if (!limitOn) return
+    var n = M.stepStart(end, start, delta)
+    if (n.start !== start) setLimit(n.stop, n.start)
   }
 
   function chargeFullOnce() {
     if (!limitOn) return
     restoreTo = end
+    restoreStart = start
     savePrefs()
-    run(["limit", "100"])
+    run(["limit", "100", "0"])
   }
 
   function cancelFullOnce() {
-    var back = restoreTo > 0 ? restoreTo : savedLimit
+    var stop = restoreTo > 0 ? restoreTo : savedStop
+    var st = restoreTo > 0 ? restoreStart : savedStart
     restoreTo = 0
     savePrefs()
-    run(["limit", String(back)])
+    run(["limit", String(stop), String(st)])
   }
 
   function setPaused(on) { run(["behaviour", on ? "inhibit-charge" : "auto"]) }
@@ -91,7 +113,8 @@ Item {
   }
 
   function savePrefs() {
-    prefsFile.setText(JSON.stringify({ savedLimit: savedLimit, restoreTo: restoreTo }))
+    prefsFile.setText(JSON.stringify({ savedStop: savedStop, savedStart: savedStart,
+                                       restoreTo: restoreTo, restoreStart: restoreStart }))
   }
 
   Process {
@@ -121,10 +144,10 @@ Item {
         s.cycles = M.num(p.cycle_count)
         s.helperReady = p.helper === "1"
         if (s.prefsLoaded && M.shouldRestore(s.snapshot)) {
-          var back = s.restoreTo
+          var back = s.restoreTo, backStart = s.restoreStart
           s.restoreTo = 0
           s.savePrefs()
-          s.run(["limit", String(back)])
+          s.run(["limit", String(back), String(backStart)])
         }
       }
     }
@@ -151,8 +174,13 @@ Item {
     onLoaded: {
       try {
         var v = JSON.parse(text()) || {}
-        if (Number(v.savedLimit) >= 50 && Number(v.savedLimit) < 100) s.savedLimit = Number(v.savedLimit)
+        if (Number(v.savedStop) >= 50 && Number(v.savedStop) < 100) {
+          s.savedStop = Number(v.savedStop)
+          var st = Number(v.savedStart)
+          s.savedStart = st >= 0 && st < s.savedStop ? st : M.startFor(s.savedStop)
+        }
         s.restoreTo = Number(v.restoreTo) > 0 ? Number(v.restoreTo) : 0
+        s.restoreStart = Number(v.restoreStart) >= 0 ? Number(v.restoreStart) : 0
       } catch (e) {
       }
       s.prefsLoaded = true

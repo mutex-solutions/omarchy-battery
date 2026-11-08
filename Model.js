@@ -75,3 +75,17 @@ function health(full, design) {
 }
 
 function wh(microWh) { return microWh > 0 ? Math.round(microWh / 1e6) + "Wh" : "—" }
+
+// Two fields, stepped in 5s: stop 50..100, start 0..stop-5. Moving stop
+// below start pulls start down with it; start never reaches stop.
+var STEP = 5
+
+function stepStop(stop, start, delta) {
+  var s = Math.max(50, Math.min(100, (stop < 0 ? 80 : stop) + delta))
+  return { stop: s, start: Math.max(0, Math.min(start, s - STEP)) }
+}
+
+function stepStart(stop, start, delta) {
+  var top = stop - STEP
+  return { stop: stop, start: Math.max(0, Math.min(top, (start < 0 ? 0 : start) + delta)) }
+}

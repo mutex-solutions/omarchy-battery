@@ -4,7 +4,7 @@
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <!-- Lets the Battery plugin set the charge limit through pkexec. Exactly one
      program, only for the active local session, and without a prompt: the
-     helper only takes a limit of 50-100 or pausing charging, so the worst a
+     helper only takes a stop of 50-100 with a start below it, or pausing charging, so the worst a
      caller can do is charge to 100% or hold the current level. -->
 <policyconfig>
   <vendor>mutex-solutions</vendor>

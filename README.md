@@ -6,13 +6,14 @@ this one changes it.
 
 - **Tile:** percentage and the limit. **Tap** turns the limit on (the last value
   you used) or off; **hold** opens the page.
-- **Page:** laid out like Omarchy's battery panel, plus a **Charge limit** row —
-  60 · 70 · 80 · 90 · Off — **100% once** (lifts the limit until the battery is
+- **Page:** laid out like Omarchy's battery panel, plus two fields —
+  **Stop charging at** and **Start charging below** (− / + in 5s; start stays
+  below stop) — **Limit on/off**, **100% once** (lifts the limit until the battery is
   full or unplugged, then restores it) and **Pause charging** (hold the current
   level, where the firmware supports `inhibit-charge`).
 
-Charging resumes 5 points below the limit, so a laptop that lives on AC is not
-topped up every few minutes.
+A gap between the two (the default is 5 points) keeps a laptop that lives on
+AC from being topped up every few minutes.
 
 ## Requirements
 
@@ -34,8 +35,8 @@ https://github.com/mutex-solutions/omarchy-battery`), or enable the bar widget.
 Writing a threshold needs root. `install-helper.sh` installs
 `/usr/local/libexec/omarchy-battery-limit` and the polkit action
 `com.mutex-solutions.battery.limit`, which lets the **active local session** run
-that one program **without a prompt**: it only takes a limit of 50-100 or
-pausing charging, so the worst a caller can do is charge to 100% or hold the
+that one program **without a prompt**: it only takes a stop of 50-100 with a
+start below it, or pausing charging, so the worst a caller can do is charge to 100% or hold the
 current level. Remove with `install-helper.sh --remove`.
 
 ## How it is built
