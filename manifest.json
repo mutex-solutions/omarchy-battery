@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "author": "mutex-solutions",
   "license": "MIT",
-  "description": "Battery charge limit for Omarchy: stop charging at 60-90%, charge to 100% once, pause charging. A Deck section or a bar widget.",
+  "description": "Battery charge limit for Omarchy: stop charging at 50-100% and start again below a second limit, charge to 100% once, pause charging. A Deck section or a bar widget.",
   "kinds": ["bar-widget"],
   "entryPoints": {
     "barWidget": "Panel.qml"
